@@ -1,0 +1,4 @@
+---
+# vars file for vsftpd
+ftp_port_start: 60000
+ftp_port_end: 60030

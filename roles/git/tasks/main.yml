@@ -1,0 +1,67 @@
+---
+# tasks file for git
+
+# ビルドの依存パッケージのインストール
+- name: install git dependency modules
+  yum:
+   name: ["gcc", "zlib-devel", "perl-ExtUtils-MakeMaker"]
+   state: latest
+   update_cache: true
+  become: yes
+  become_method: sudo
+
+# 初期チェック
+- name: create download directory
+  file:
+   path: ~/download
+   state: directory
+
+- name: check git installation
+  command: which git
+  register: git_existance
+  ignore_errors: yes
+
+- name: check git version
+  shell: git version | cut -d ' ' -f3
+  register: current_git_version
+  when: git_existance is success
+
+# ダウンロードとソースの展開
+- name: download git
+  get_url:
+   url: https://www.kernel.org/pub/software/scm/git/git-{{git_version_only}}.tar.xz
+   dest: ~/download
+  register: git_downloaded
+  when: not current_git_version==git_version_only or git_existance is failed
+
+- name: extract git
+  unarchive:
+   src: ~/download/git-{{git_version_only}}.tar.xz
+   dest: ~/download
+   remote_src: yes
+  register: git_src_extract
+  when: git_downloaded is success
+
+
+# ビルド
+- name: configure git
+  command: ./configure
+  args:
+   chdir: ~/download/git-{{git_version_only}}
+  register: config_git
+  when: git_src_extract is success
+
+- name: make git
+  command: make
+  args:
+   chdir: ~/download/git-{{git_version_only}}
+  register: make_git
+  when: config_git is success
+
+- name: install git
+  command: make install
+  args:
+   chdir: /home/{{user_name}}/download/git-{{git_version_only}}
+  become: yes
+  become_method: sudo
+  when: make_git is success

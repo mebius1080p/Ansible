@@ -1,0 +1,23 @@
+# firewalld の設定
+
+- name: ensure firewalld is running
+  service:
+   name: firewalld
+   state: started
+   enabled: yes
+  become: yes
+  become_method: sudo
+
+# http/s 以外のポートについてはそれぞれ別のロールでポートを空ける
+# 各ロールでは自分に必要なポートを逐一開ける
+- name: open firewall port
+  firewalld:
+   service: "{{item}}"
+   permanent: true
+   state: enabled
+   immediate: true
+  with_items:
+   - "http"
+   - "https"
+  become: yes
+  become_method: sudo

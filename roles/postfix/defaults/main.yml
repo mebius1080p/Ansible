@@ -1,0 +1,5 @@
+---
+# defaults file for postfix
+# 上書き可能
+cert_file_path: /etc/pki/tls/certs/server.crt
+privte_key_path: /etc/pki/tls/certs/server.key

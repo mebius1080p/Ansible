@@ -1,0 +1,109 @@
+---
+# tasks file for postfix
+- name: install postfix
+  yum:
+   name: ["postfix"]
+   state: latest
+   update_cache: true
+  become: yes
+  become_method: sudo
+
+# 設定
+- name: modify config main
+  ini_file:
+   path: /etc/postfix/main.cf
+   backup: no
+   section:
+   option: "{{item.option}}"
+   value: "{{item.value}}"
+  with_items:
+   - { option: "myhostname", value: "{{domain_name}}" }
+   - { option: "inet_interfaces", value: "all" }
+   - { option: "inet_protocols", value: "all" }
+   - { option: "mydestination", value: "$myhostname, localhost.$mydomain, localhost" }
+   - { option: "mynetworks", value: "127.0.0.1,172.18.0.0/16" }
+   - { option: "home_mailbox", value: "Maildir/" }
+   - { option: "smtpd_use_tls", value: "yes" }
+   - { option: "smtpd_tls_cert_file", value: "{{cert_file_path}}" }
+   - { option: "smtpd_tls_key_file", value: "{{privte_key_path}}" }
+   - { option: "smtpd_tls_session_cache_database", value: "btree:/var/lib/postfix/smtpd_scache" }
+   - { option: "smtpd_milters", value: "inet:127.0.0.1:8891"}
+   - { option: "non_smtpd_milters", value: "$smtpd_milters"}
+   - { option: "milter_default_action", value: "accept"}
+   - { option: "smtp_tls_CAfile", value: "/etc/pki/tls/cert.pem"}
+   - { option: "smtp_tls_security_level", value: "may"}
+   - { option: "smtp_tls_loglevel", value: "1"}
+  become: yes
+  become_method: sudo
+
+- name: modify master config
+  lineinfile:
+   path: /etc/postfix/master.cf
+   backup: yes
+   regexp: "{{item.regexp}}"
+   line: "{{item.line}}"
+   state: present
+  with_items:
+   - regexp: "^#?  -o smtpd_tls_wrappermode=yes"
+     line: "  -o smtpd_tls_wrappermode=yes"
+   - regexp: "^#?smtps     inet"
+     line: "smtps     inet  n       -       n       -       -       smtpd"
+  become: yes
+  become_method: sudo
+
+- name: modify alias
+  lineinfile:
+   path: /etc/aliases
+   backup: yes
+   regexp: "{{item.regexp}}"
+   line: "{{item.line}}"
+   state: present
+  with_items:
+   - regexp: "^#?root:"
+     line: "root:	{{user_name}}"
+  become: yes
+  become_method: sudo
+
+# alias の反映 (/etc/aliases の記述にあるとおり実行してみる)
+- name: update aliases
+  command: newaliases
+  become: yes
+  become_method: sudo
+
+
+# 再起動の前に dkim 設定を済ます
+- import_tasks: dkim.yml
+
+
+# 起動
+# オプション変更時用に、restart にしておく
+- name: ensure postfix is running
+  service:
+   name: postfix
+   state: restarted
+   enabled: yes
+  become: yes
+  become_method: sudo
+
+
+# firewall の設定
+- name: open firewall port
+  firewalld:
+   service: "{{item}}"
+   permanent: true
+   state: enabled
+   immediate: true
+  with_items:
+   - "smtp"
+   - "smtps"
+   - "smtp-submission"
+  become: yes
+  become_method: sudo
+
+- name: restart firewalld
+  service:
+   name: firewalld
+   state: restarted
+   enabled: yes
+  become: yes
+  become_method: sudo

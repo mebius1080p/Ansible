@@ -1,0 +1,9 @@
+site.yml
+gohei.yml
+msuna.yml
+production
+staging
+*.key
+*.crt
+*/postfix/files/*.private
+*/postfix/files/*.txt

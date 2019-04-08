@@ -1,0 +1,89 @@
+---
+# tasks file for dovecot
+- name: install dovecot
+  yum:
+   name: ["dovecot"]
+   state: latest
+   update_cache: true
+  become: yes
+  become_method: sudo
+
+
+- name: modify mail config
+  lineinfile:
+   path: /etc/dovecot/conf.d/10-mail.conf
+   backup: yes
+   regexp: "{{item.regexp}}"
+   line: "{{item.line}}"
+   state: present
+  with_items:
+   - regexp: "^#?mail_location ="
+     line: "mail_location = maildir:~/Maildir"
+  become: yes
+  become_method: sudo
+
+- name: modify mail-ssl config
+  lineinfile:
+   path: /etc/dovecot/conf.d/10-ssl.conf
+   backup: yes
+   regexp: "{{item.regexp}}"
+   line: "{{item.line}}"
+   state: present
+  with_items:
+   - regexp: "^#ssl_protocols"
+     line: "ssl_protocols = TLSv1.2"
+   - regexp: "^#ssl_cipher_list"
+     line: "ssl_cipher_list = ECDHE-RSA-AES256-GCM-SHA384"
+   - regexp: "^#ssl_prefer_server_ciphers"
+     line: "ssl_prefer_server_ciphers = yes"
+   - regexp: "^#?ssl_cert ="
+     line: "ssl_cert = <{{cert_file_path}}"
+   - regexp: "^#?ssl_key ="
+     line: "ssl_key = <{{privte_key_path}}"
+  become: yes
+  become_method: sudo
+
+
+- name: modify main dovecott config
+  lineinfile:
+   path: /etc/dovecot/dovecot.conf
+   backup: yes
+   insertafter: EOF
+   regexp: "{{item.regexp}}"
+   line: "{{item.line}}"
+   state: present
+  with_items:
+   - regexp: "^#?protocols ="
+     line: "protocols = pop3"
+  become: yes
+  become_method: sudo
+
+
+# 起動
+# オプション変更時用に、restart にしておく
+- name: ensure dovecot is running
+  service:
+   name: dovecot
+   state: restarted
+   enabled: yes
+  become: yes
+  become_method: sudo
+
+
+# firewall の設定
+- name: open firewall port
+  firewalld:
+   service: "pop3s"
+   permanent: true
+   state: enabled
+   immediate: true
+  become: yes
+  become_method: sudo
+
+- name: restart firewalld
+  service:
+   name: firewalld
+   state: restarted
+   enabled: yes
+  become: yes
+  become_method: sudo

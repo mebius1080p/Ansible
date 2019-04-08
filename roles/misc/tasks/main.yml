@@ -1,0 +1,29 @@
+---
+# tasks file for misc
+# アプリインストール後のそのほかのタスク
+
+# - name: modify /var/www permission
+#   file:
+#    path: /var/www
+#    state: directory
+#    mode: 0777
+#   become: yes
+#   become_method: sudo
+
+# git 系セットアップ
+- name: make git bare repository
+  file:
+   path: ~/git/web.git
+   state: directory
+
+- name: check bare repo is initialized
+  stat:
+   path: ~/git/web.git/HEAD
+  register: git_bare_initialized
+
+
+- name: make git bare repository
+  command: git init --bare
+  args:
+   chdir: ~/git/web.git
+  when: not git_bare_initialized.stat.exists

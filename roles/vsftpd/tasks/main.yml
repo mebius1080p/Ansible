@@ -1,0 +1,117 @@
+---
+# tasks file for vsftpd
+- name: install vsftpd
+  yum:
+   name: ["vsftpd"]
+   state: latest
+   update_cache: true
+  become: yes
+  become_method: sudo
+
+
+- name: modify config
+  ini_file:
+   path: /etc/vsftpd/vsftpd.conf
+   backup: no
+   no_extra_spaces: yes
+   section:
+   option: "{{item.option}}"
+   value: "{{item.value}}"
+  with_items:
+   - { option: "anonymous_enable", value: "NO" }
+   - { option: "local_enable", value: "YES" }
+   - { option: "write_enable", value: "YES" }
+   - { option: "local_umask", value: "022" }
+   - { option: "xferlog_enable", value: "YES" }
+   - { option: "connect_from_port_20", value: "YES" }
+   - { option: "xferlog_file", value: "/var/log/xferlog" }
+   - { option: "xferlog_std_format", value: "YES" }
+   - { option: "ascii_upload_enable", value: "YES" }
+   - { option: "ascii_download_enable", value: "YES" }
+   - { option: "ftpd_banner", value: "Welcome to FTP service" } # optional
+   - { option: "chroot_local_user", value: "YES" }
+   - { option: "chroot_list_enable", value: "YES" }
+   - { option: "chroot_list_file", value: "/etc/vsftpd/chroot_list" }
+   - { option: "listen", value: "NO" }
+   - { option: "listen_ipv6", value: "YES" }
+   - { option: "pam_service_name", value: "vsftpd" } # extra
+   - { option: "userlist_enable", value: "YES" } # extra
+   - { option: "tcp_wrappers", value: "YES" } # extra
+   - { option: "use_localtime", value: "YES" } # extra
+   - { option: "pasv_addr_resolve", value: "YES" } # extra
+   - { option: "pasv_min_port", value: "{{ftp_port_start}}" } # extra
+   - { option: "pasv_max_port", value: "{{ftp_port_end}}" } # extra
+   - { option: "ssl_enable", value: "YES" } # 以下 ftps 用
+   - { option: "rsa_cert_file", value: "{{cert_file_path}}" }
+   - { option: "rsa_private_key_file", value: "{{privte_key_path}}" }
+   - { option: "force_local_logins_ssl", value: "YES" }
+   - { option: "force_local_data_ssl", value: "YES" }
+   - { option: "ssl_sslv2", value: "NO" }
+   - { option: "ssl_sslv3", value: "NO" }
+   - { option: "ssl_tlsv1", value: "NO" }
+   - { option: "ssl_tlsv1_1", value: "NO" }
+   - { option: "ssl_tlsv1_2", value: "YES" }
+   - { option: "ssl_ciphers", value: "ECDHE-RSA-AES256-GCM-SHA384" }
+   - { option: "allow_writeable_chroot", value: "YES" }
+  become: yes
+  become_method: sudo
+
+- name: create chroot_list file
+  copy:
+   content: ""
+   dest: /etc/vsftpd/chroot_list
+   force: no
+   group: root
+   owner: root
+   mode: 0644
+  become: yes
+  become_method: sudo
+
+
+# selinux
+- name: set sebool for homedir FTP
+  seboolean:
+   name: ftpd_full_access
+   state: yes
+   persistent: yes
+  become: yes
+  become_method: sudo
+
+
+# 起動
+# オプション変更時用に、restart にしておく
+- name: ensure vsftpd is running
+  service:
+   name: vsftpd
+   state: restarted
+   enabled: yes
+  become: yes
+  become_method: sudo
+
+
+# firewall の設定
+# ポートとサービスの更新は一括でできない模様
+- name: open firewall port A
+  firewalld:
+   service: "ftp"
+   permanent: true
+   state: enabled
+   immediate: true
+  become: yes
+  become_method: sudo
+- name: open firewall port B
+  firewalld:
+   port: "{{ftp_port_start}}-{{ftp_port_end}}/tcp"
+   permanent: true
+   state: enabled
+   immediate: true
+  become: yes
+  become_method: sudo
+
+- name: restart firewalld
+  service:
+   name: firewalld
+   state: restarted
+   enabled: yes
+  become: yes
+  become_method: sudo

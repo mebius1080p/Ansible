@@ -1,0 +1,9 @@
+- hosts: webservers
+  roles:
+   - common
+   - git
+   - docker
+   - vsftpd
+   - postfix
+   - dovecot
+   - misc

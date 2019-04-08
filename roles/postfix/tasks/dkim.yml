@@ -1,0 +1,105 @@
+---
+# tasks file for dkim
+- name: install opendkim
+  yum:
+   name: ["opendkim"]
+   state: latest
+   update_cache: true
+  become: yes
+  become_method: sudo
+
+
+# 鍵ファイルをコピー
+- name: copy dkim cert files
+  copy:
+   dest: "{{item.to}}" # required. Remote absolute path where the file should be copied to. If I(src) is a directory, this must be a directory too. If I(dest) is a nonexistent path and if either I(dest) ends with "/" or I(src) is a directory, I(dest) is created. If I(src) and I(dest) are files, the parent directory of I(dest) isn't created: the task fails if it doesn't already exist.
+   src: "{{item.from}}" # not required. Local path to a file to copy to the remote server; can be absolute or relative. If path is a directory, it is copied recursively. In this case, if path ends with "/", only inside contents of that directory are copied to destination. Otherwise, if it does not end with "/", the directory itself with all contents is copied. This behavior is similar to Rsync.
+   force: no # not required. the default is C(yes), which will replace the remote file when contents are different than the source. If C(no), the file will only be transferred if the destination does not exist.
+   remote_src: no # not required. If C(no), it will search for I(src) at originating/master machine.,If C(yes) it will go to the remote/target machine for the I(src). Default is C(no).,Currently I(remote_src) does not support recursive copying.,I(remote_src) only works with C(mode=preserve) as of version 2.6.
+   decrypt: no # not required. This option controls the autodecryption of source files using vault.
+   group: opendkim # not required. Name of the group that should own the file/directory, as would be fed to I(chown).
+   mode: 0600 # not required. Mode the file or directory should be. For those used to I(/usr/bin/chmod) remember that modes are actually octal numbers. You must either add a leading zero so that Ansible's YAML parser knows it is an octal number (like C(0644) or C(01777)) or quote it (like C('644') or C('1777')) so Ansible receives a string and can do its own conversion from string into number.  Giving Ansible a number without following one of these rules will end up with a decimal number which will have unexpected results.  As of version 1.8, the mode may be specified as a symbolic mode (for example, C(u+rwx) or C(u=rw,g=r,o=r)).  As of version 2.3, the mode may also be the special string C(preserve).  C(preserve) means that the file will be given the same permissions as the source file.
+   owner: opendkim # not required. Name of the user that should own the file/directory, as would be fed to I(chown).
+   backup: no # not required. Create a backup file including the timestamp information so you can get the original file back if you somehow clobbered it incorrectly.
+  with_items:
+   - { from: "{{domain_name}}.default.private", to: "/etc/opendkim/keys/default.private" }
+   - { from: "{{domain_name}}.default.txt", to: "/etc/opendkim/keys/default.txt" }
+  become: yes
+  become_method: sudo
+
+
+# 設定変更
+- name: modify opendkim config
+  lineinfile:
+   path: /etc/opendkim.conf
+   backup: yes
+   regexp: "{{item.regexp}}"
+   line: "{{item.line}}"
+   state: present
+   backrefs: yes
+  with_items:
+   - regexp: "^Mode"
+     line: "Mode	sv"
+   - regexp: "^#SoftwareHeader"
+     line: "SoftwareHeader	no"
+   - regexp: "^(KeyFile.*)$"
+     line: '#\1'
+   - regexp: "^#? ?(KeyTable.*)$"
+     line: '\1'
+   - regexp: "^#? ?(SigningTable.*)$"
+     line: '\1'
+   - regexp: "^#? ?(ExternalIgnoreList.*)$"
+     line: '\1'
+   - regexp: "^#? ?(InternalHosts.*)$"
+     line: '\1'
+  become: yes
+  become_method: sudo
+
+- name: modify opendkim KeyTable config
+  lineinfile:
+   path: /etc/opendkim/KeyTable
+   backup: yes
+   regexp: "{{item.regexp}}"
+   line: "{{item.line}}"
+   state: present
+   backrefs: yes
+  with_items:
+   - regexp: "^#default._domainkey"
+     line: "default._domainkey.{{domain_name}} {{domain_name}}:default:/etc/opendkim/keys/default.private"
+  become: yes
+  become_method: sudo
+
+- name: modify opendkim SigningTable config
+  lineinfile:
+   path: /etc/opendkim/SigningTable
+   backrefs: yes
+   state: present
+   regexp: "{{item.regexp}}"
+   backup: yes
+   line: "{{item.line}}"
+  with_items:
+   - regexp: "^#\\*@example.com"
+     line: "*@{{domain_name}} default._domainkey.{{domain_name}}"
+  become: yes
+  become_method: sudo
+
+- name: modify opendkim TrustedHosts config
+  lineinfile:
+   path: /etc/opendkim/TrustedHosts
+   state: present
+   insertafter: "::1"
+   backup: yes
+   line: "172.18.0.0/16"
+  become: yes
+  become_method: sudo
+
+
+# 起動
+# オプション変更時用に、restart にしておく
+- name: ensure opendkim is running
+  service:
+   name: opendkim
+   state: restarted
+   enabled: yes
+  become: yes
+  become_method: sudo
