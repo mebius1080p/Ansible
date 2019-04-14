@@ -21,7 +21,7 @@
    - { option: "inet_interfaces", value: "all" }
    - { option: "inet_protocols", value: "all" }
    - { option: "mydestination", value: "$myhostname, localhost.$mydomain, localhost" }
-   - { option: "mynetworks", value: "127.0.0.1,172.17.0.0/16" }
+   - { option: "mynetworks", value: "127.0.0.1,172.18.0.0/16" }
    - { option: "home_mailbox", value: "Maildir/" }
    - { option: "smtpd_use_tls", value: "yes" }
    - { option: "smtpd_tls_cert_file", value: "{{cert_file_path}}" }
