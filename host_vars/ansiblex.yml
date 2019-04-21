@@ -1,3 +1,4 @@
 # サイト固有の変数
 user_name: ansuser
 domain_name: ansible.local
+mail_address: ansuser@example.com

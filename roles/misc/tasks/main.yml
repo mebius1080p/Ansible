@@ -27,3 +27,24 @@
   args:
    chdir: ~/git/web.git
   when: not git_bare_initialized.stat.exists
+
+# git config
+- name: git config mail
+  command: "git config --global user.email {{mail_address}}"
+
+- name: git config name
+  command: "git config --global user.name {{user_name}}"
+
+- name: git config color
+  command: git config --global color.ui true
+
+- name: git config quote
+  command: git config --global core.quotepath false
+
+# alias
+- name: git status alias
+  lineinfile:
+   path: ~/.bashrc
+   line: "alias gg='git status'"
+   state: present
+   insertafter: EOF
