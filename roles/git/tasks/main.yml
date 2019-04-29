@@ -4,7 +4,7 @@
 # ビルドの依存パッケージのインストール
 - name: install git dependency modules
   yum:
-   name: ["gcc", "zlib-devel", "perl-ExtUtils-MakeMaker"]
+   name: ["gcc", "zlib-devel", "perl-ExtUtils-MakeMaker", "curl-devel"]
    state: latest
    update_cache: true
   become: yes
