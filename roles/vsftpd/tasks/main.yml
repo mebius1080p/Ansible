@@ -37,7 +37,7 @@
    - { option: "pam_service_name", value: "vsftpd" } # extra
    - { option: "userlist_enable", value: "YES" } # extra
    - { option: "tcp_wrappers", value: "YES" } # extra
-   - { option: "use_localtime", value: "YES" } # extra
+   - { option: "use_localtime", value: "NO" } # extra
    - { option: "pasv_addr_resolve", value: "YES" } # extra
    - { option: "pasv_min_port", value: "{{ftp_port_start}}" } # extra
    - { option: "pasv_max_port", value: "{{ftp_port_end}}" } # extra
