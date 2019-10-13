@@ -53,6 +53,7 @@
    - { option: "ssl_tlsv1_2", value: "YES" }
    - { option: "ssl_ciphers", value: "ECDHE-RSA-AES256-GCM-SHA384" }
    - { option: "allow_writeable_chroot", value: "YES" }
+   - { option: "require_ssl_reuse", value: "NO" }
   become: yes
   become_method: sudo
 
